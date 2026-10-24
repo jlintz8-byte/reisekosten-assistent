@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reisekosten-Assistent</title>
+<style>
+  :root { --brand:#4f46e5; }
+  * { box-sizing:border-box; }
+  body { font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:#f1f5f9; color:#1e293b; margin:0; padding:16px; }
+  .wrap { max-width:920px; margin:0 auto; }
+  .stats { display:flex; gap:12px; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; }
+  .stats h1 { margin:0; font-size:1.5rem; }
+  .sub { color:#64748b; font-size:.9rem; margin:.25rem 0 0; }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; }
+  .chip { background:#fff; border-radius:12px; padding:8px 16px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .chip .lbl { font-size:.68rem; text-transform:uppercase; letter-spacing:.05em; color:#94a3b8; }
+  .chip .val { font-size:1.1rem; font-weight:700; }
+  .chip.warn { background:#fef3c7; }
+  nav { display:flex; gap:8px; flex-wrap:wrap; margin:16px 0; }
+  nav button { border:none; border-radius:999px; padding:8px 16px; font-size:.9rem; font-weight:500; cursor:pointer; background:#fff; color:#475569; }
+  nav button.active { background:var(--brand); color:#fff; }
+  .grid { display:grid; gap:16px; grid-template-columns:1fr 1fr; }
+  @media (max-width:820px) { .grid { grid-template-columns:1fr; } }
+  .card { background:#fff; border-radius:16px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .card h2 { margin:0 0 16px; font-size:1.05rem; }
+  label.fl { display:block; font-size:.75rem; font-weight:500; color:#64748b; margin:0 0 4px; }
+  input, select { width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:.95rem; background:#fff; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+  .btn { display:inline-block; border:none; border-radius:8px; padding:10px 16px; font-size:.9rem; font-weight:600; cursor:pointer; background:var(--brand); color:#fff; }
+  .btn.sec { background:#fff; color:#475569; border:1px solid #cbd5e1; }
+  .btn.dark { background:#1e293b; }
+  .btn.full { width:100%; margin-top:12px; }
+  .stepper { display:flex; align-items:center; gap:4px; }
+  .stepper button { width:32px; height:32px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; cursor:pointer; font-size:1rem; }
+  .stepper input { width:56px; text-align:center; }
+  .zahlraster { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; }
+  @media (min-width:520px) { .zahlraster { grid-template-columns:repeat(4,1fr); } }
+  .hinweis { background:#eef2ff; color:#312e81; border-radius:10px; padding:10px 14px; font-size:.85rem; margin-top:12px; }
+  .warnbox { background:#fef3c7; color:#92400e; border-radius:10px; padding:10px 14px; font-size:.8rem; margin-top:12px; }
+  .fehler { background:#ffe4e6; color:#be123c; border-radius:8px; padding:8px 12px; font-size:.8rem; margin-top:10px; }
+  .liste { list-style:none; margin:0; padding:0; }
+  .liste li { border:1px solid #e2e8f0; border-radius:12px; padding:12px; margin-bottom:8px; }
+  .liste .top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+  .liste .t { font-weight:600; font-size:.9rem; }
+  .liste .m { color:#94a3b8; font-size:.75rem; }
+  .liste .d { color:#64748b; font-size:.75rem; margin-top:4px; }
+  .del { background:none; border:none; color:#94a3b8; cursor:pointer; font-size:.9rem; padding:2px 6px; }
+  .del:hover { color:#e11d48; }
+  .leer { background:#f8fafc; border-radius:12px; padding:28px; text-align:center; color:#94a3b8; font-size:.85rem; }
+  .scanlabel { display:flex; flex-direction:column; align-items:center; gap:6px; border:2px dashed #a5b4fc; background:#eef2ff; border-radius:12px; padding:28px 12px; text-align:center; cursor:pointer; }
+  .scanlabel:hover { background:#e0e7ff; }
+  .scanlabel .t { font-weight:600; color:#4338ca; font-size:.9rem; }
+  .scanlabel .m { font-size:.75rem; color:#64748b; }
+  .progress { height:8px; background:#e2e8f0; border-radius:999px; overflow:hidden; margin-top:8px; }
+  @keyframes fuellen { from { width:0; } to { width:100%; } }
+  .progress > div { height:100%; background:var(--brand); animation:fuellen 1.2s ease-out forwards; }
+  .kopfzeile { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .sect { text-transform:uppercase; letter-spacing:.05em; font-size:.7rem; font-weight:700; color:#94a3b8; margin:12px 0 4px; }
+  footer { text-align:center; color:#94a3b8; font-size:.75rem; margin:24px 0 8px; }
+  #print-area { display:none; }
+  @media print {
+    body { background:#fff; padding:0; }
+    #app { display:none; }
+    #print-area { display:block; padding:8mm; }
+  }
+  .p-firma { font-size:1.2rem; font-weight:700; margin:0 0 2px; }
+  .p-sub { color:#475569; font-size:.85rem; margin:0; }
+  .p-meta { color:#475569; font-size:.75rem; margin:8px 0 4px; }
+  .p-sect { text-transform:uppercase; letter-spacing:.05em; font-size:.7rem; font-weight:700; color:#475569; margin:14px 0 4px; }
+  .p-tab { width:100%; border-collapse:collapse; font-size:.72rem; }
+  .p-tab th { border-bottom:1px solid #64748b; text-align:left; padding:4px 6px; }
+  .p-tab td { border-bottom:1px solid #cbd5e1; padding:4px 6px; }
+  .p-sum { margin-top:12px; font-size:.78rem; text-align:right; color:#334155; }
+  .p-total { font-size:1rem; font-weight:700; text-align:right; margin:4px 0 0; }
+  .p-note { background:#fef3c7; padding:8px 12px; font-size:.72rem; color:#92400e; margin-top:12px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div id="header"></div>
+  <nav id="nav"></nav>
+  <main id="content"></main>
+  <footer>Alle Daten bleiben lokal im Browser · Keine echten Namen – nur Mitarbeiternummern · Berechnung folgt der Excel-Vorlage vom 15.07.2024 · Kein Server, kein Tracking</footer>
+</div>
+<div id="print-area"></div>
+<script>
+"use strict";
+var TAGESSATZ_8_24 = 14;
+var TAGESSATZ_24 = 28;
+var UE_PAUSCHALE = 20;
+var ABZUG = { f: 0.2, m: 0.4, a: 0.4 };
+var BELEG_KATEGORIEN = ["Anreise/Abreise","Hotel","Bewirtung","Parken/Maut","Büromaterial","Sonstiges"];
+var TABS = [
+  ["mehraufwand","Verpflegungsmehraufwand"],
+  ["belege","Belege (Fotoscan)"],
+  ["mitarbeiter","Mitarbeiter-Nummern"],
+  ["avis","Abrechnung"]
+];
+
+function lsGet(k, fb) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : fb; } catch (e) { return fb; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function p2(n) { return String(n).padStart(2, "0"); }
+function heute() { var d = new Date(); return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate()); }
+function eur(n) { return n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €"; }
+function dtFormat(s) { return new Date(s).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }); }
+function dFormat(s) { return new Date(s + "T12:00:00").toLocaleDateString("de-DE"); }
+function startOfDay(d) { var x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+function frac(d) { return (d.getTime() - startOfDay(d).getTime()) / 86400000; }
+function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+function berechne(r) {
+  var b = new Date(r.anreise), c = new Date(r.abreise);
+  if (isNaN(b.getTime()) || isNaN(c.getTime()) || c < b) return null;
+  var same = startOfDay(b).getTime() === startOfDay(c).getTime();
+  var g = same ? 1 : Math.ceil(frac(b)) + Math.ceil(frac(c));
+  var intDiff = Math.round((startOfDay(c) - startOfDay(b)) / 86400000);
+  var h = Math.max(intDiff + (frac(b) === 0 ? 1 : 0) - 1, 0);
+  var m = TAGESSATZ_24 * ABZUG.f * r.frueh;
+  var n = TAGESSATZ_24 * ABZUG.m * r.mittag;
+  var o = TAGESSATZ_24 * ABZUG.a * r.abend;
+  var p = g * TAGESSATZ_8_24 + h * TAGESSATZ_24 - m - n - o + r.naechte * UE_PAUSCHALE;
+  return { g: g, h: h, m: m, n: n, o: o, p: p };
+}
+
+function leereReise() { return { anreise: "", abreise: "", land: "Deutschland", ort: "", zweck: "", frueh: 0, mittag: 0, abend: 0, naechte: 0 }; }
+
+var state = {
+  tab: "mehraufwand",
+  mitarbeiter: lsGet("rka-mitarbeiter", []),
+  aktuelleNr: lsGet("rka-aktuelle-nr", ""),
+  reisen: lsGet("rka-reisen", []),
+  belege: lsGet("rka-belege", []),
+  firma: lsGet("rka-firma", ""),
+  einreichung: heute(),
+  neueNr: "",
+  reiseForm: leereReise(),
+  reiseFehler: "",
+  belegForm: { datum: heute(), betrag: "", kategorie: BELEG_KATEGORIEN[0], zweck: "" },
+  belegFoto: null,
+  belegStatus: "bereit",
+  belegFehler: "",
+  nrFehler: "",
+  avisOffen: false
+};
+
+function summen() {
+  var mr = 0;
+  state.reisen.forEach(function (r) { var e = berechne(r); if (e) mr += e.p; });
+  var bs = 0;
+  state.belege.forEach(function (b) { bs += b.betrag; });
+  var nachte = 0;
+  state.reisen.forEach(function (r) { nachte += (r.naechte || 0); });
+  return { mr: mr, bs: bs, gesamt: mr + bs, nachte: nachte };
+}
+function rechnungsnummer(S) { return "VL-" + (state.aktuelleNr || "0000") + "-" + S.gesamt.toFixed(2).replace(".", ","); }
+
+/* ---------- Aktionen ---------- */
+
+function setTab(t) { state.tab = t; render(); }
+function setRF(k, v) { state.reiseForm[k] = v; render(); }
+function stepRF(k, d) { state.reiseForm[k] = Math.max(0, (state.reiseForm[k] || 0) + d); render(); }
+function setZahlRF(k, v) { state.reiseForm[k] = Math.max(0, parseInt(v || "0", 10) || 0); render(); }
+
+function reiseHinzufuegen() {
+  state.reiseFehler = "";
+  var f = state.reiseForm;
+  if (!f.anreise || !f.abreise) { state.reiseFehler = "Bitte An- und Abreisetag mit Uhrzeit angeben."; render(); return; }
+  if (new Date(f.abreise) < new Date(f.anreise)) { state.reiseFehler = "Die Abreise darf nicht vor der Ankunft liegen."; render(); return; }
+  if (!f.zweck.trim()) { state.reiseFehler = "Bitte den Reisezweck angeben."; render(); return; }
+  f.zweck = f.zweck.trim();
+  f.ort = f.ort.trim();
+  f.id = String(Date.now()) + Math.floor(Math.random() * 1000);
+  state.reisen.unshift(f);
+  lsSet("rka-reisen", state.reisen);
+  state.reiseForm = leereReise();
+  render();
+}
+function loescheReise(id) { state.reisen = state.reisen.filter(function (r) { return r.id !== id; }); lsSet("rka-reisen", state.reisen); render(); }
+
+function setBF(k, v) { state.belegForm[k] = v; render(); }
+
+function belegFotoWaehlen(el) {
+  var file = el.files && el.files[0];
+  if (!file) return;
+  state.belegFehler = "";
+  state.belegStatus = "scanne";
+  render();
+  var reader = new FileReader();
+  reader.onload = function () {
+    var img = new Image();
+    img.onload = function () {
+      var max = 320;
+      var skala = Math.min(1, max / Math.max(img.width, img.height));
+      var c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(img.width * skala));
+      c.height = Math.max(1, Math.round(img.height * skala));
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      state.belegFoto = c.toDataURL("image/jpeg", 0.7);
+      setTimeout(function () {
+        state.belegStatus = "fertig";
+        state.belegForm.datum = heute();
+        render();
+      }, 1200);
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+  el.value = "";
+}
+
+function belegHinzufuegen() {
+  state.belegFehler = "";
+  var f = state.belegForm;
+  var betrag = parseFloat(String(f.betrag).replace(",", "."));
+  if (!(betrag > 0)) { state.belegFehler = "Bitte einen gültigen Betrag größer 0 eingeben."; render(); return; }
+  if (!f.zweck.trim()) { state.belegFehler = "Bitte kurz angeben, wofür die Ausgabe war."; render(); return; }
+  state.belege.unshift({
+    id: String(Date.now()) + Math.floor(Math.random() * 1000),
+    datum: f.datum || heute(),
+    betrag: Math.round(betrag * 100) / 100,
+    kategorie: f.kategorie,
+    zweck: f.zweck.trim(),
+    foto: state.belegFoto
+  });
+  lsSet("rka-belege", state.belege);
+  state.belegFoto = null;
+  state.belegStatus = "bereit";
+  state.belegForm = { datum: heute(), betrag: "", kategorie: BELEG_KATEGORIEN[0], zweck: "" };
+  render();
+}
+function belegVerwerfen() { state.belegFoto = null; state.belegStatus = "bereit"; render(); }
+function loescheBeleg(id) { state.belege = state.belege.filter(function (b) { return b.id !== id; }); lsSet("rka-belege", state.belege); render(); }
+
+function setNN(v) { state.neueNr = v; }
+function mitarbeiterAnlegen() {
+  state.nrFehler = "";
+  var nr = (state.neueNr || "").trim();
+  if (!/^[0-9A-Za-z-]{2,20}$/.test(nr)) { state.nrFehler = "Bitte 2–20 Zeichen: Ziffern, Buchstaben oder Bindestrich."; render(); return; }
+  if (state.mitarbeiter.some(function (m) { return m.nr.toLowerCase() === nr.toLowerCase(); })) { state.nrFehler = "Diese Nummer ist bereits angelegt."; render(); return; }
+  state.mitarbeiter.push({ nr: nr });
+  lsSet("rka-mitarbeiter", state.mitarbeiter);
+  state.neueNr = "";
+  render();
+}
+function alsAktivWaehlen(nr) { state.aktuelleNr = nr; lsSet("rka-aktuelle-nr", nr); render(); }
+function mitarbeiterLoeschen(nr) {
+  state.mitarbeiter = state.mitarbeiter.filter(function (m) { return m.nr !== nr; });
+  lsSet("rka-mitarbeiter", state.mitarbeiter);
+  if (state.aktuelleNr === nr) { state.aktuelleNr = ""; lsSet("rka-aktuelle-nr", ""); }
+  render();
+}
+function setFirma(v) { state.firma = v; lsSet("rka-firma", v); render(); }
+function setEinreichung(v) { state.einreichung = v; render(); }
+function avisToggle() { state.avisOffen = !state.avisOffen; render(); }
+function drucken() { window.print(); }
+
+/* ---------- Ansichten ---------- */
+
+function avisInhalt(S) {
+  var firma = state.firma.trim();
+  var rn = rechnungsnummer(S);
+  var h = "";
+  h += '<p class="p-firma">' + (firma ? esc(firma) : "Firmenname") + '</p>';
+  h += '<p class="p-sub">Zahlungsavis · Reisekosten (Verpflegungsmehraufwand und Belege)</p>';
+  h += '<p class="p-meta">Mitarbeiter-Nr. ' + esc(state.aktuelleNr || "0000") + ' · Rechnungsnummer ' + esc(rn) + ' · Einreichung am ' + dFormat(state.einreichung) + '</p>';
+  var reiseZeilen = 0;
+  state.reisen.forEach(function (r) { var e = berechne(r); if (e) reiseZeilen++; });
+  if (reiseZeilen > 0) {
+    h += '<p class="p-sect">Verpflegungsmehraufwand</p>';
+    h += '<table class="p-tab"><thead><tr><th>Anreise</th><th>Abreise</th><th>Ort</th><th>Zweck</th><th style="text-align:center">8–24 h</th><th style="text-align:center">24 h</th><th style="text-align:center">ÜN</th><th style="text-align:right">Tagessatz</th></tr></thead><tbody>';
+    state.reisen.forEach(function (r) {
+      var e = berechne(r);
+      if (!e) return;
+      h += '<tr><td>' + dtFormat(r.anreise) + '</td><td>' + dtFormat(r.abreise) + '</td><td>' + esc(r.ort) + '</td><td>' + esc(r.zweck) + '</td><td style="text-align:center">' + e.g + '</td><td style="text-align:center">' + e.h + '</td><td style="text-align:center">' + r.naechte + '</td><td style="text-align:right;font-weight:600">' + eur(e.p) + '</td></tr>';
+    });
+    h += '</tbody></table>';
+  }
+  if (state.belege.length > 0) {
+    h += '<p class="p-sect">Belege</p>';
+    h += '<table class="p-tab"><thead><tr><th>Datum</th><th>Zweck</th><th>Kategorie</th><th style="text-align:right">Betrag</th></tr></thead><tbody>';
+    state.belege.forEach(function (b) {
+      h += '<tr><td>' + dFormat(b.datum) + '</td><td>' + esc(b.zweck) + '</td><td>' + esc(b.kategorie) + '</td><td style="text-align:right;font-weight:600">' + eur(b.betrag) + '</td></tr>';
+    });
+    h += '</tbody></table>';
+  }
+  h += '<p class="p-sum">Verpflegungsmehraufwand: ' + eur(S.mr) + '<br>Belege: ' + eur(S.bs) + '</p>';
+  h += '<p class="p-total">Auszahlungsbetrag: ' + eur(S.gesamt) + '</p>';
+  if (S.nachte > 0) {
+    h += '<p class="p-note">Hinweis für die Lohnbuchhaltung: ' + S.nachte + ' selbst organisierte Übernachtung(en) – zusätzlich 20 €/Nacht über das Bruttogehalt auszahlen.</p>';
+  }
+  return h;
+}
+
+function zahlFeldHtml(label, key) {
+  return '<div><label class="fl">' + label + '</label><div class="stepper">'
+    + '<button type="button" onclick="stepRF(\'' + key + '\',-1)">−</button>'
+    + '<input type="number" min="0" value="' + state.reiseForm[key] + '" onchange="setZahlRF(\'' + key + '\',this.value)">'
+    + '<button type="button" onclick="stepRF(\'' + key + '\',1)">+</button>'
+    + '</div></div>';
+}
+
+function tabMehraufwand() {
+  var S = summen();
+  var f = state.reiseForm;
+  var e = berechne(f);
+  var h = '<div class="grid">';
+  h += '<div class="card"><h2>Reise erfassen</h2>';
+  h += '<div class="row2"><div><label class="fl">Anreisetag &amp; Uhrzeit</label><input type="datetime-local" value="' + f.anreise + '" onchange="setRF(\'anreise\',this.value)"></div>';
+  h += '<div><label class="fl">Abreisetag &amp; Uhrzeit</label><input type="datetime-local" value="' + f.abreise + '" onchange="setRF(\'abreise\',this.value)"></div></div>';
+  h += '<div class="row2"><div><label class="fl">Reiseziel (Ort)</label><input type="text" placeholder="z. B. Frankfurt" value="' + esc(f.ort) + '" onchange="setRF(\'ort\',this.value)"></div>';
+  h += '<div><label class="fl">Land</label><select onchange="setRF(\'land\',this.value)"><option' + (f.land === "Deutschland" ? " selected" : "") + '>Deutschland</option><option' + (f.land !== "Deutschland" ? " selected" : "") + '>Ausland (Pauschale trägt Buchhaltung ein)</option></select></div></div>';
+  h += '<div><label class="fl">Reisezweck</label><input type="text" placeholder="z. B. Messe Hannover" value="' + esc(f.zweck) + '" onchange="setRF(\'zweck\',this.value)"></div>';
+  h += '<div class="zahlraster">' + zahlFeldHtml("Frühstück erhalten", "frueh") + zahlFeldHtml("Mittag erhalten", "mittag") + zahlFeldHtml("Abend erhalten", "abend") + zahlFeldHtml("Selbst org. Nächte", "naechte") + '</div>';
+  h += '<p style="font-size:.72rem;color:#94a3b8;margin-top:6px">Nächte nur bei selbst organisierten Übernachtungen (z. B. bei Freunden): 20 €/Nacht Pauschale.</p>';
+  if (e) {
+    var details = e.g + ' Tag(e) à 14 € · ' + e.h + ' Tag(e) à 28 €';
+    if (f.frueh + f.mittag + f.abend > 0) details += ' · Abzüge ' + eur(e.m + e.n + e.o) + ' (20/40/40 % vom 28-€-Satz)';
+    if (f.naechte > 0) details += ' · ' + f.naechte + ' × 20 € ÜN-Pauschale';
+    h += '<div class="hinweis"><b>Vorschau: Tagessatz ' + eur(e.p) + '</b><br>' + details + '</div>';
+  }
+  if (state.reiseFehler) h += '<p class="fehler">' + esc(state.reiseFehler) + '</p>';
+  h += '<button class="btn full" onclick="reiseHinzufuegen()">Reise hinzufügen</button>';
+  h += '</div>';
+  h += '<div class="card"><div class="kopfzeile"><h2 style="margin:0">Reisen</h2><span class="hinweis" style="margin:0;padding:4px 12px">' + eur(S.mr) + '</span></div>';
+  if (state.reisen.length === 0) {
+    h += '<div class="leer">Noch keine Reisen erfasst.</div>';
+  } else {
+    h += '<ul class="liste">';
+    state.reisen.forEach(function (r) {
+      var b = berechne(r);
+      if (!b) return;
+      var d = b.g + '× 14 € + ' + b.h + '× 28 €';
+      if (b.m + b.n + b.o > 0) d += ' − ' + eur(b.m + b.n + b.o) + ' Mahlzeiten';
+      if (r.naechte > 0) d += ' + ' + r.naechte + '× 20 € ÜN';
+      h += '<li><div class="top"><div><div class="t">' + esc(r.zweck) + '</div>'
+        + '<div class="m">' + (r.ort ? esc(r.ort) + ' · ' : '') + dtFormat(r.anreise) + ' → ' + dtFormat(r.abreise) + '</div>'
+        + '<div class="d">' + d + '</div></div>'
+        + '<div style="display:flex;align-items:center;gap:6px"><b>' + eur(b.p) + '</b>'
+        + '<button class="del" onclick="loescheReise(\'' + r.id + '\')" title="Reise löschen">✕</button></div></div></li>';
+    });
+    h += '</ul>';
+  }
+  h += '</div></div>';
+  return h;
+}
+
+function tabBelege() {
+  var S = summen();
+  var f = state.belegForm;
+  var h = '<div class="grid">';
+  h += '<div class="card"><h2>Beleg erfassen</h2>';
+  h += '<label class="scanlabel"><span style="font-size:1.6rem">📷</span><span class="t">Belegfoto aufnehmen oder auswählen</span><span class="m">Am Handy öffnet sich direkt die Kamera</span><input type="file" accept="image/*" capture="environment" style="display:none" onchange="belegFotoWaehlen(this)"></label>';
+  if (state.belegStatus === "scanne") {
+    h += '<div style="margin-top:12px"><span style="font-size:.85rem;color:#475569">Beleg wird gescannt …</span><div class="progress"><div></div></div></div>';
+  }
+  if (state.belegStatus === "fertig") {
+    if (state.belegFoto) h += '<img src="' + state.belegFoto + '" alt="Belegfoto" style="max-height:180px;width:100%;object-fit:contain;border:1px solid #e2e8f0;border-radius:12px;margin-top:12px">';
+    h += '<p class="warnbox">Foto übernommen – Betrag und Datum bitte hier prüfen und eintragen. Das Foto wird mitgespeichert.</p>';
+    h += '<div class="row2" style="margin-top:12px"><div><label class="fl">Datum</label><input type="date" value="' + f.datum + '" onchange="setBF(\'datum\',this.value)"></div>';
+    h += '<div><label class="fl">Betrag (€)</label><input type="text" inputmode="decimal" placeholder="z. B. 24,90" value="' + esc(f.betrag) + '" onchange="setBF(\'betrag\',this.value)"></div></div>';
+    h += '<div style="margin-bottom:10px"><label class="fl">Wofür war die Ausgabe?</label><select onchange="setBF(\'kategorie\',this.value)">';
+    BELEG_KATEGORIEN.forEach(function (k) { h += '<option' + (f.kategorie === k ? " selected" : "") + '>' + esc(k) + '</option>'; });
+    h += '</select></div>';
+    h += '<div><label class="fl">Kurze Beschreibung</label><input type="text" placeholder="z. B. Taxi zum Flughafen" value="' + esc(f.zweck) + '" onchange="setBF(\'zweck\',this.value)"></div>';
+    if (state.belegFehler) h += '<p class="fehler">' + esc(state.belegFehler) + '</p>';
+    h += '<div style="display:flex;gap:8px;margin-top:12px"><button class="btn" style="flex:1" onclick="belegHinzufuegen()">Beleg hinzufügen</button><button class="btn sec" onclick="belegVerwerfen()">Verwerfen</button></div>';
+  }
+  if (state.belegStatus === "bereit") h += '<p style="font-size:.75rem;color:#94a3b8;margin-top:12px">Noch kein Belegfoto ausgewählt.</p>';
+  h += '</div>';
+  h += '<div class="card"><div class="kopfzeile"><h2 style="margin:0">Belegliste</h2><span class="hinweis" style="margin:0;padding:4px 12px">' + eur(S.bs) + '</span></div>';
+  if (state.belege.length === 0) {
+    h += '<div class="leer">Noch keine Belege erfasst.</div>';
+  } else {
+    h += '<ul class="liste">';
+    state.belege.forEach(function (b) {
+      var thumb = b.foto ? '<img src="' + b.foto + '" alt="Beleg" style="width:44px;height:44px;border-radius:8px;object-fit:cover;flex:none">' : '<div style="width:44px;height:44px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex:none">🧾</div>';
+      h += '<li><div class="top">' + thumb + '<div style="flex:1;min-width:0"><div class="t" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(b.zweck) + '</div><div class="m">' + dFormat(b.datum) + ' · ' + esc(b.kategorie) + '</div></div>'
+        + '<div style="display:flex;align-items:center;gap:6px"><b>' + eur(b.betrag) + '</b><button class="del" onclick="loescheBeleg(\'' + b.id + '\')" title="Beleg löschen">✕</button></div></div></li>';
+    });
+    h += '</ul>';
+  }
+  h += '</div></div>';
+  return h;
+}
+
+function tabMitarbeiter() {
+  var h = '<div class="grid">';
+  h += '<div class="card"><h2>Neuen Mitarbeiter anlegen</h2>';
+  h += '<div style="display:flex;gap:8px"><input type="text" placeholder="z. B. 4711" onchange="setNN(this.value)"><button class="btn" style="flex:none" onclick="mitarbeiterAnlegen()">Anlegen</button></div>';
+  if (state.nrFehler) h += '<p class="fehler">' + esc(state.nrFehler) + '</p>';
+  h += '<div class="warnbox" style="margin-top:14px"><b>Datenschutz-Konzept</b><br>Auf der Website wird niemand mit echten Namen erfasst. Die Zuordnung Nummer → Person liegt ausschließlich bei der Lohnbuchhaltung – dort kann jede Abrechnung über die Nummer nachvollzogen werden, ohne dass die Website personenbezogene Daten speichert.</div>';
+  h += '</div>';
+  h += '<div class="card"><h2>Vergebene Nummern</h2>';
+  if (state.mitarbeiter.length === 0) {
+    h += '<div class="leer">Noch keine Nummern angelegt.</div>';
+  } else {
+    h += '<ul class="liste">';
+    state.mitarbeiter.forEach(function (m) {
+      var aktiv = state.aktuelleNr === m.nr;
+      h += '<li style="' + (aktiv ? "border-color:#a5b4fc;background:#eef2ff;" : "") + '"><div class="top"><span style="font-family:monospace;font-weight:700">' + esc(m.nr) + '</span><div>'
+        + (aktiv ? '<span style="font-size:.75rem;font-weight:600;color:#4338ca">aktiv</span>' : '<button class="btn sec" style="padding:6px 12px;font-size:.75rem" onclick="alsAktivWaehlen(\'' + esc(m.nr) + '\')">Als aktiv wählen</button>')
+        + ' <button class="del" onclick="mitarbeiterLoeschen(\'' + esc(m.nr) + '\')" title="Nummer löschen">✕</button></div></div></li>';
+    });
+    h += '</ul>';
+  }
+  h += '</div></div>';
+  return h;
+}
+
+function tabAvis() {
+  var S = summen();
+  var h = '<div class="card">';
+  h += '<div class="kopfzeile"><h2 style="margin:0">Zahlungsavis an die Lohnbuchhaltung</h2></div>';
+  h += '<div class="row2"><div><label class="fl">Firmenname (erscheint auf dem Avis)</label><input type="text" placeholder="z. B. Musterfirma GmbH" value="' + esc(state.firma) + '" onchange="setFirma(this.value)"></div>';
+  h += '<div><label class="fl">Datum der Einreichung</label><input type="date" value="' + state.einreichung + '" onchange="setEinreichung(this.value)"></div></div>';
+  h += '<p style="font-size:.8rem;color:#64748b;margin:0 0 4px">Rechnungsnummer (automatisch): <b>' + esc(rechnungsnummer(S)) + '</b></p>';
+  if (!state.aktuelleNr) h += '<p class="warnbox">Noch keine Mitarbeiternummer gewählt – bitte zuerst im Tab „Mitarbeiter-Nummern" eine Nummer aktivieren, damit die Abrechnung anonym bleibt.</p>';
+  h += '<button class="btn" style="margin-top:12px" onclick="avisToggle()">' + (state.avisOffen ? "Vorschau ausblenden" : "Avis-Vorschau erstellen") + '</button>';
+  if (state.avisOffen) {
+    h += '<div style="border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;padding:16px;margin-top:12px">';
+    h += '<div style="background:#fff;border-radius:10px;padding:16px">' + avisInhalt(S) + '</div>';
+    h += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px">';
+    h += '<button class="btn dark" onclick="drucken()">PDF erstellen / herunterladen</button>';
+    h += '<span style="font-size:.75rem;color:#64748b">Im Druckdialog „Als PDF speichern" wählen und die Datei anschließend an die Lohnbuchhaltung mailen.</span>';
+    h += '</div></div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function render() {
+  var S = summen();
+  document.getElementById("header").innerHTML = '<div class="stats"><div><h1>Reisekosten-Assistent</h1>'
+    + '<p class="sub">Anonymisiert: Reisen und Belege erfassen, Abrechnung als PDF an die Lohnbuchhaltung.</p></div>'
+    + '<div class="chips">'
+    + '<div class="chip' + (state.aktuelleNr ? "" : " warn") + '"><div class="lbl">Mitarbeiter-Nr.</div><div class="val">' + (state.aktuelleNr ? esc(state.aktuelleNr) : "nicht gewählt") + '</div></div>'
+    + '<div class="chip"><div class="lbl">Gesamtsumme</div><div class="val">' + eur(S.gesamt) + '</div></div>'
+    + '</div></div>';
+  document.getElementById("nav").innerHTML = TABS.map(function (t) {
+    return '<button class="' + (state.tab === t[0] ? "active" : "") + '" onclick="setTab(\'' + t[0] + '\')">' + t[1] + '</button>';
+  }).join("");
+  var c = document.getElementById("content");
+  if (state.tab === "mehraufwand") c.innerHTML = tabMehraufwand();
+  else if (state.tab === "belege") c.innerHTML = tabBelege();
+  else if (state.tab === "mitarbeiter") c.innerHTML = tabMitarbeiter();
+  else c.innerHTML = tabAvis();
+  document.getElementById("print-area").innerHTML = avisInhalt(S);
+}
+
+render();
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" nonce="8X4jGMBSVqr9JMa49Ipakw==" data-cf-beacon='{"version":"2024.11.0","token":"36b4216ae2dc4d5488c249161e71fe1e","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
